@@ -2,11 +2,13 @@ import os
 import shutil
 import uuid
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse
+import asyncio
 from fastapi.staticfiles import StaticFiles
 import uvicorn
-from tracker import run_tracking_inference
-from movement import extract_movement_features
+import concurrent.futures
+from tracker import run_tracking_inference, render_pose_video
+from movement import extract_movement_features, render_movement_video
 
 app = FastAPI(title="Badminton Pose Detection API")
 
@@ -52,9 +54,17 @@ def process_video_task(task_id, video_path, mp4_path, json_path, csv_path):
             input_json_path=json_path,
             output_json_path=movement_json_path,
             output_csv_path=movement_csv_path,
-            output_video_path=movement_mp4_path,
-            original_video_path=video_path
+            output_video_path=None,
+            original_video_path=None
         )
+
+        progress_store[task_id]["progress"] = 90
+        
+        # Step 3: Render both videos simultaneously using multi-threading
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            f1 = executor.submit(render_pose_video, video_path, mp4_path, json_path)
+            f2 = executor.submit(render_movement_video, movement_json_path, video_path, movement_mp4_path)
+            concurrent.futures.wait([f1, f2])
 
         progress_store[task_id] = {
             "status": "completed", 
@@ -93,6 +103,27 @@ async def process_video(background_tasks: BackgroundTasks, file: UploadFile = Fi
 @app.get("/api/progress/{task_id}")
 def get_progress(task_id: str):
     return progress_store.get(task_id, {"status": "not_found", "progress": 0})
+
+@app.get("/api/progress-stream/{task_id}")
+async def progress_stream(task_id: str):
+    import json
+    async def event_generator():
+        last_progress = -1
+        last_status = None
+        while True:
+            data = progress_store.get(task_id, {"status": "not_found", "progress": 0})
+            
+            if data["progress"] != last_progress or data["status"] != last_status:
+                yield f"data: {json.dumps(data)}\n\n"
+                last_progress = data.get("progress")
+                last_status = data.get("status")
+                
+            if data["status"] in ["completed", "failed", "not_found"]:
+                break
+                
+            await asyncio.sleep(0.5)
+            
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @app.get("/api/download/{filename}")
 async def download_file(filename: str):

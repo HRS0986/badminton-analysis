@@ -101,20 +101,26 @@ document.getElementById('uploadForm').addEventListener('submit', async (e) => {
     setStatus('working', 'Inference running…');
     progressStatus.textContent = 'Running pose detection…';
 
-    // ── Poll ──────────────────────────────────────────────────────────
-    const interval = setInterval(async () => {
-      try {
-        const res  = await fetch(`/api/progress/${task_id}`);
-        const data = await res.json();
+    // ── SSE (Server-Sent Events) ──────────────────────────────────────────
+    const eventSource = new EventSource(`/api/progress-stream/${task_id}`);
+
+    eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
 
         if (data.status === 'processing' || data.status === 'starting') {
           const pct = data.progress ?? 0;
           progressBar.style.width   = `${pct}%`;
           progressPct.textContent   = `${pct}%`;
-          progressStatus.textContent = pct < 50 ? 'Detecting poses…' : 'Analysing movement…';
+          if (pct < 50) {
+            progressStatus.textContent = 'Detecting poses…';
+          } else if (pct < 90) {
+            progressStatus.textContent = 'Analysing movement…';
+          } else {
+            progressStatus.textContent = 'Rendering videos simultaneously...';
+          }
 
         } else if (data.status === 'completed') {
-          clearInterval(interval);
+          eventSource.close();
           progressBar.style.width   = '100%';
           progressPct.textContent   = '100%';
           progressStatus.textContent = 'Complete!';
@@ -179,18 +185,19 @@ document.getElementById('uploadForm').addEventListener('submit', async (e) => {
           document.getElementById('btnMovementMp4').onclick = () => window.location.href = data.exports.movement_mp4_url;
 
         } else if (data.status === 'failed') {
-          clearInterval(interval);
-          setStatus('error', `Error: ${data.error}`);
+          eventSource.close();
+          setStatus('error', `Error: ${data.error || 'Processing failed'}`);
           progressStatus.textContent = 'Processing failed';
           submitBtn.disabled      = false;
           submitBtnText.textContent = 'Retry';
           submitBtnIcon.textContent = '🔄';
         }
+    };
 
-      } catch (pollErr) {
-        console.error('Polling error:', pollErr);
-      }
-    }, 1000);
+    eventSource.onerror = (err) => {
+      eventSource.close();
+      setStatus('error', 'Lost connection to server');
+    };
 
   } catch (err) {
     setStatus('error', err.message);

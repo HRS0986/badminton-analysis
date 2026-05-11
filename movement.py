@@ -441,114 +441,105 @@ def extract_movement_features(input_json_path, output_json_path, output_csv_path
     with open(output_json_path, 'w') as f:
         json.dump(output_doc, f, indent=2)
 
-    # ── Annotated video (full notebook overlay logic) ─────────────────────────
-    if output_video_path and original_video_path:
-        frame_lookup   = {e['frame_id']: e for e in frame_entries}
-        # Build jump_height lookup by frame_id for the indicator bar
-        jh_lookup      = {int(row['frame_id']): float(row['jump_height_px'])
-                          for _, row in df.iterrows()}
-
-        cap = cv2.VideoCapture(original_video_path)
-        if cap.isOpened():
-            fw_v    = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            fh_v    = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            fps_out = cap.get(cv2.CAP_PROP_FPS) or 30
-            total_fr = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
-            out_vid = cv2.VideoWriter(
-                output_video_path,
-                cv2.VideoWriter_fourcc(*'avc1'),
-                fps_out, (fw_v, fh_v)
-            )
-
-            for video_frame_id in range(total_fr):
-                ret, frame = cap.read()
-                if not ret:
-                    break
-
-                entry = frame_lookup.get(video_frame_id)
-
-                if entry is None:
-                    out_vid.write(frame)
-                    continue
-
-                bb  = entry['bounding_box']
-                mv  = entry['movement']
-                fw_ = entry['footwork']
-                st  = entry['status']
-                cp  = entry['center_position']
-                kps = entry['pose']['keypoints']
-
-                x1 = int(bb['x'])
-                y1 = int(bb['y'])
-                x2 = int(bb['x'] + bb['width'])
-                y2 = int(bb['y'] + bb['height'])
-                cx = (x1 + x2) // 2
-                cy = (y1 + y2) // 2
-
-                step_col = COL.get(fw_['step_type'], COL['stand'])
-
-                # 1. Bounding box (colour = step type)
-                cv2.rectangle(frame, (x1, y1), (x2, y2), step_col, 2)
-
-                # 2. Skeleton
-                if kps:
-                    _draw_skeleton(frame, kps)
-
-                # 3. Direction arrow from bounding-box centre
-                _draw_direction_arrow(frame, cx, cy, mv['direction'], mv['speed'])
-
-                # 4. Per-player info text box
-                zone_label = f"Zone: {entry.get('court_zone', '?')}"
-                flags = []
-                if st['is_jumping']:    flags.append('JUMP')
-                if st['is_recovering']: flags.append('RECOVER')
-                if not flags and st['is_moving']:
-                    flags.append(fw_['step_type'].upper())
-                if not flags:
-                    flags.append('STAND')
-
-                cp_x = cp['court_x'] if cp['court_x'] is not None else '?'
-                cp_y = cp['court_y'] if cp['court_y'] is not None else '?'
-
-                lines = [
-                    f"Spd: {mv['speed']:.1f} m/s  Acc: {mv['acceleration']:+.1f}",
-                    f"Dir: {mv['direction']:.0f}deg  Step: {fw_['step_type']}",
-                    f"Court: ({cp_x}, {cp_y}) m",
-                    zone_label,
-                    '  '.join(flags),
-                ]
-                _draw_text_box(frame, lines, (max(0, x1), max(0, y1 - 110)))
-
-                # 5. Speed bar (top-left of frame)
-                _draw_speed_bar(frame, mv['speed'], origin=(16, 20))
-
-                # 6. Foot dots
-                for foot_key in ('left_foot', 'right_foot'):
-                    ft = fw_.get(foot_key)
-                    if ft:
-                        cv2.circle(frame,
-                                   (int(ft['x']), int(ft['y'])),
-                                   6, (0, 255, 180), -1)
-
-                # 7. Jump height bar (right side of bbox)
-                jh_px = jh_lookup.get(video_frame_id, 0.0)
-                if jh_px > 10:
-                    jh_int   = int(jh_px)
-                    jh_bar_x = x2 + 6
-                    cv2.line(frame,
-                             (jh_bar_x, y2),
-                             (jh_bar_x, max(y2 - jh_int, 0)),
-                             (0, 0, 255), 4)
-                    cv2.putText(frame,
-                                f'J:{jh_int}px',
-                                (jh_bar_x + 4, max(y2 - jh_int - 4, 10)),
-                                cv2.FONT_HERSHEY_SIMPLEX, 0.38,
-                                (0, 0, 255), 1, cv2.LINE_AA)
-
-                out_vid.write(frame)
-
-            cap.release()
-            out_vid.release()
-
     return aggregated_metrics
+
+def render_movement_video(json_path, original_video_path, output_video_path):
+    with open(json_path, 'r') as f:
+        data = json.load(f)
+    frame_entries = data.get('frames', [])
+    
+    if not output_video_path or not original_video_path:
+        return
+
+    frame_lookup = {e['frame_id']: e for e in frame_entries}
+    jh_lookup = {e['frame_id']: float(e.get('jump_height_px', 0.0)) for e in frame_entries}
+
+    cap = cv2.VideoCapture(original_video_path)
+    if not cap.isOpened():
+        return
+
+    fw_v    = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    fh_v    = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps_out = cap.get(cv2.CAP_PROP_FPS) or 30
+    total_fr = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    out_vid = cv2.VideoWriter(
+        output_video_path,
+        cv2.VideoWriter_fourcc(*'avc1'),
+        fps_out, (fw_v, fh_v)
+    )
+
+    for video_frame_id in range(total_fr):
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        entry = frame_lookup.get(video_frame_id)
+        if entry is None:
+            out_vid.write(frame)
+            continue
+
+        bb  = entry.get('bounding_box', {})
+        mv  = entry.get('movement', {})
+        fw_ = entry.get('footwork', {})
+        st  = entry.get('status', {})
+        cp  = entry.get('center_position', {})
+        pose = entry.get('pose', {})
+        kps = pose.get('keypoints', [])
+
+        x1 = int(bb.get('x', 0))
+        y1 = int(bb.get('y', 0))
+        x2 = int(x1 + bb.get('width', 0))
+        y2 = int(y1 + bb.get('height', 0))
+        cx = (x1 + x2) // 2
+        cy = (y1 + y2) // 2
+
+        step_col = COL.get(fw_.get('step_type', 'stand'), COL['stand'])
+
+        cv2.rectangle(frame, (x1, y1), (x2, y2), step_col, 2)
+
+        if kps:
+            _draw_skeleton(frame, kps)
+
+        _draw_direction_arrow(frame, cx, cy, mv.get('direction', 0), mv.get('speed', 0))
+
+        zone_label = f"Zone: {entry.get('court_zone', '?')}"
+        flags = []
+        if st.get('is_jumping'):    flags.append('JUMP')
+        if st.get('is_recovering'): flags.append('RECOVER')
+        if not flags and st.get('is_moving'):
+            flags.append(str(fw_.get('step_type', '')).upper())
+        if not flags:
+            flags.append('STAND')
+
+        cp_x = cp.get('court_x') if cp.get('court_x') is not None else '?'
+        cp_y = cp.get('court_y') if cp.get('court_y') is not None else '?'
+
+        lines = [
+            f"Spd: {mv.get('speed', 0):.1f} m/s  Acc: {mv.get('acceleration', 0):+.1f}",
+            f"Dir: {mv.get('direction', 0):.0f}deg  Step: {fw_.get('step_type', '')}",
+            f"Court: ({cp_x}, {cp_y}) m",
+            zone_label,
+            '  '.join(flags),
+        ]
+        _draw_text_box(frame, lines, (max(0, x1), max(0, y1 - 110)))
+
+        _draw_speed_bar(frame, mv.get('speed', 0), origin=(16, 20))
+
+        for foot_key in ('left_foot', 'right_foot'):
+            ft = fw_.get(foot_key)
+            if ft:
+                cv2.circle(frame, (int(ft['x']), int(ft['y'])), 6, (0, 255, 180), -1)
+
+        jh_px = jh_lookup.get(video_frame_id, 0.0)
+        if jh_px > 10:
+            jh_int   = int(jh_px)
+            jh_bar_x = x2 + 6
+            cv2.line(frame, (jh_bar_x, y2), (jh_bar_x, max(y2 - jh_int, 0)), (0, 0, 255), 4)
+            cv2.putText(frame, f'J:{jh_int}px', (jh_bar_x + 4, max(y2 - jh_int - 4, 10)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.38, (0, 0, 255), 1, cv2.LINE_AA)
+
+        out_vid.write(frame)
+
+    cap.release()
+    out_vid.release()

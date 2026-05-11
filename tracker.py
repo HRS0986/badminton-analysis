@@ -212,8 +212,6 @@ def run_tracking_inference(video_path, out_mp4, out_json, out_csv, model_path="y
         fps = 30
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    out = cv2.VideoWriter(out_mp4, cv2.VideoWriter_fourcc(*"avc1"), fps, (frame_w, frame_h))
-
     tracking_json = {
         "fps": fps,
         "frame_width": frame_w,
@@ -306,20 +304,9 @@ def run_tracking_inference(video_path, out_mp4, out_json, out_csv, model_path="y
             x1, y1, x2, y2 = map(int, box)
 
             if missing_count == 0:
-                box_color = (0, 255, 0)
                 status = "tracked"
             else:
-                box_color = (0, 165, 255)
                 status = "temporarily_predicted"
-
-            cv2.rectangle(frame, (x1, y1), (x2, y2), box_color, 3)
-            
-            cv2.putText(frame, f"Target Player | {status}", (x1, max(30, y1 - 30)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.65, box_color, 2)
-            cv2.putText(frame, f"Shot: {pose_name} ({shot_conf:.2f})", (x1, max(55, y1 - 8)),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 0), 2)
-            
-            draw_pose(frame, kpts, kpt_conf)
 
             frame_data["player_detected"] = True
             frame_data["tracking_status"] = status
@@ -342,14 +329,12 @@ def run_tracking_inference(video_path, out_mp4, out_json, out_csv, model_path="y
                 csv_rows.append([frame_id, 1, name, kx, ky, score])
 
         tracking_json["frames"].append(frame_data)
-        out.write(frame)
         prev_frame = frame.copy()
         
         if progress_callback:
             progress_callback(frame_id + 1, total_frames)
 
     cap.release()
-    out.release()
 
     with open(out_json, "w") as f:
         json.dump(tracking_json, f, indent=4)
@@ -366,3 +351,56 @@ def run_tracking_inference(video_path, out_mp4, out_json, out_csv, model_path="y
         "keypoints_detected": 17,
         "average_confidence": round(avg_conf, 2)
     }
+
+def render_pose_video(video_path, out_mp4, json_path):
+    import json
+    import numpy as np
+    
+    with open(json_path, 'r') as f:
+        data = json.load(f)
+    frames_data = {f['frame_id']: f for f in data['frames']}
+
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise Exception("Cannot open video")
+
+    frame_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    frame_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    out = cv2.VideoWriter(out_mp4, cv2.VideoWriter_fourcc(*"avc1"), fps, (frame_w, frame_h))
+
+    for frame_id in range(total_frames):
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        fd = frames_data.get(frame_id)
+        if fd and fd.get("player_detected"):
+            status = fd.get("tracking_status", "missing")
+            box_color = (0, 255, 0) if status == "tracked" else (0, 165, 255)
+            bb = fd["bounding_box"]
+            if bb is not None:
+                x1, y1, x2, y2 = int(bb["x1"]), int(bb["y1"]), int(bb["x2"]), int(bb["y2"])
+                cv2.rectangle(frame, (x1, y1), (x2, y2), box_color, 3)
+                cv2.putText(frame, f"Target Player | {status}", (x1, max(30, y1 - 30)),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.65, box_color, 2)
+                pose_name = fd.get("shot_classification", "Detecting...")
+                shot_conf = fd.get("shot_confidence", 0.0)
+                cv2.putText(frame, f"Shot: {pose_name} ({shot_conf:.2f})", (x1, max(55, y1 - 8)),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 0), 2)
+
+            # Draw pose
+            kpts = np.zeros((17, 2))
+            kpt_conf = np.zeros(17)
+            for kp in fd.get("keypoints", []):
+                idx = kp["id"]
+                kpts[idx] = [kp["x"], kp["y"]]
+                kpt_conf[idx] = kp["confidence"]
+            draw_pose(frame, kpts, kpt_conf)
+
+        out.write(frame)
+
+    cap.release()
+    out.release()
