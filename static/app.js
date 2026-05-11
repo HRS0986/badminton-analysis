@@ -1,120 +1,220 @@
-const fileInput = document.getElementById('videoFile');
-const fileNameDisplay = document.getElementById('file-name-display');
+/* ── Tab switcher (global, called from HTML onclick) ─────────────────────── */
+function switchTab(tab) {
+  const poseVideo     = document.getElementById('outputVideo');
+  const movementVideo = document.getElementById('outputMovementVideo');
+  const tabPose       = document.getElementById('tabPose');
+  const tabMovement   = document.getElementById('tabMovement');
 
-fileInput.addEventListener('change', (e) => {
-    if (fileInput.files.length > 0) {
-        fileNameDisplay.textContent = fileInput.files[0].name;
-    } else {
-        fileNameDisplay.textContent = "Click to Select a Video (MP4)";
-    }
+  if (tab === 'pose') {
+    poseVideo.style.display     = 'block';
+    movementVideo.style.display = 'none';
+    tabPose.classList.add('active');
+    tabMovement.classList.remove('active');
+  } else {
+    poseVideo.style.display     = 'none';
+    movementVideo.style.display = 'block';
+    tabPose.classList.remove('active');
+    tabMovement.classList.add('active');
+  }
+}
+
+/* ── Element refs ────────────────────────────────────────────────────────── */
+const fileInput       = document.getElementById('videoFile');
+const uploadArea      = document.getElementById('uploadArea');
+const selectedFile    = document.getElementById('selectedFile');
+const fileNameDisplay = document.getElementById('fileNameDisplay');
+const submitBtn       = document.getElementById('submitBtn');
+const submitBtnText   = document.getElementById('submitBtnText');
+const submitBtnIcon   = document.getElementById('submitBtnIcon');
+
+const progressSection = document.getElementById('progressSection');
+const progressBar     = document.getElementById('progressBar');
+const progressStatus  = document.getElementById('progressStatus');
+const progressPct     = document.getElementById('progressPct');
+
+const statusBadge = document.getElementById('statusBadge');
+const statusDot   = document.getElementById('statusDot');
+const statusText  = document.getElementById('statusText');
+
+/* ── Status helper ───────────────────────────────────────────────────────── */
+function setStatus(state, message) {
+  statusBadge.className = `status-badge ${state}`;
+  statusDot.className   = `status-dot${state === 'working' ? ' pulse' : ''}`;
+  statusText.textContent = message;
+}
+
+/* ── File drag & drop ────────────────────────────────────────────────────── */
+uploadArea.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  uploadArea.classList.add('drag-over');
 });
 
+['dragleave', 'dragend'].forEach(evt =>
+  uploadArea.addEventListener(evt, () => uploadArea.classList.remove('drag-over'))
+);
+
+uploadArea.addEventListener('drop', (e) => {
+  e.preventDefault();
+  uploadArea.classList.remove('drag-over');
+  const files = e.dataTransfer?.files;
+  if (files && files.length > 0) {
+    const dt = new DataTransfer();
+    dt.items.add(files[0]);
+    fileInput.files = dt.files;
+    showSelectedFile(files[0].name);
+  }
+});
+
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length > 0) {
+    showSelectedFile(fileInput.files[0].name);
+  }
+});
+
+function showSelectedFile(name) {
+  fileNameDisplay.textContent = name;
+  selectedFile.style.display  = 'flex';
+  setStatus('idle', 'File selected');
+}
+
+/* ── Form submit ─────────────────────────────────────────────────────────── */
 document.getElementById('uploadForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (fileInput.files.length === 0) {
-        alert("Please select a video file first.");
-        return;
+  if (fileInput.files.length === 0) {
+    setStatus('error', 'Please select a file first');
+    return;
+  }
+
+  const file     = fileInput.files[0];
+  const formData = new FormData();
+  formData.append('file', file);
+
+  // Reset results panels
+  ['dashboard', 'movementDashboard', 'exports', 'videoPlayerSection'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  document.getElementById('mainContainer').className = 'centered-layout';
+  document.getElementById('mainContainer').querySelector('.right-column').style.display = 'none';
+
+  // UI — uploading state
+  submitBtn.disabled      = true;
+  submitBtnText.textContent = 'Processing…';
+  submitBtnIcon.textContent = '⏳';
+  progressSection.style.display = 'block';
+  progressBar.style.width = '0%';
+  progressStatus.textContent = 'Uploading…';
+  progressPct.textContent = '0%';
+  setStatus('working', 'Uploading video…');
+
+  try {
+    const response = await fetch('/api/process-video', { method: 'POST', body: formData });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.detail || 'Upload failed');
     }
 
-    const file = fileInput.files[0];
-    const formData = new FormData();
-    formData.append('file', file);
+    const { task_id } = await response.json();
+    setStatus('working', 'Inference running…');
+    progressStatus.textContent = 'Running pose detection…';
 
-    const statusMessage = document.getElementById('statusMessage');
-    const progressContainer = document.getElementById('progressContainer');
-    const progressBar = document.getElementById('progressBar');
-    const submitBtn = document.getElementById('submitBtn');
+    // ── Poll ──────────────────────────────────────────────────────────
+    const interval = setInterval(async () => {
+      try {
+        const res  = await fetch(`/api/progress/${task_id}`);
+        const data = await res.json();
 
-    statusMessage.textContent = "Uploading & initializing... Please wait.";
-    progressContainer.style.display = 'block';
-    progressBar.style.width = '0%';
-    document.getElementById('dashboard').style.display = 'none';
-    document.getElementById('movementDashboard').style.display = 'none';
-    document.getElementById('exports').style.display = 'none';
-    document.getElementById('videoPlayerSection').style.display = 'none';
-    document.getElementById('movementVideoSection').style.display = 'none';
-    submitBtn.disabled = true;
+        if (data.status === 'processing' || data.status === 'starting') {
+          const pct = data.progress ?? 0;
+          progressBar.style.width   = `${pct}%`;
+          progressPct.textContent   = `${pct}%`;
+          progressStatus.textContent = pct < 50 ? 'Detecting poses…' : 'Analysing movement…';
 
-    // reset to centered layout on new upload iteration
-    document.getElementById('mainContainer').className = 'centered-layout';
+        } else if (data.status === 'completed') {
+          clearInterval(interval);
+          progressBar.style.width   = '100%';
+          progressPct.textContent   = '100%';
+          progressStatus.textContent = 'Complete!';
+          setStatus('success', 'Analysis complete');
 
-    try {
-        const response = await fetch('/api/process-video', {
-            method: 'POST',
-            body: formData
-        });
+          submitBtn.disabled        = false;
+          submitBtnText.textContent = 'Analyse Again';
+          submitBtnIcon.textContent = '⚡';
 
-        if (response.ok) {
-            const data = await response.json();
-            const taskId = data.task_id;
+          // Switch to two-column
+          document.getElementById('mainContainer').className = 'two-column-layout';
+          const rightCol = document.getElementById('mainContainer').querySelector('.right-column');
+          rightCol.style.display = 'flex';
 
-            // Poll for progress
-            const interval = setInterval(async () => {
-                try {
-                    const progRes = await fetch(`/api/progress/${taskId}`);
-                    const progData = await progRes.json();
+          // ── Pose detection section ───────────────────────────────────
+          const dash = document.getElementById('dashboard');
+          dash.style.display = 'block';
+          if (data.metrics) {
+            document.getElementById('avgConfidence').textContent =
+              data.metrics.average_confidence != null
+                ? `${data.metrics.average_confidence}%`
+                : '—';
+          }
 
-                    if (progData.status === 'processing' || progData.status === 'starting') {
-                        statusMessage.textContent = `Processing: ${progData.progress}%`;
-                        progressBar.style.width = `${progData.progress}%`;
-                    } else if (progData.status === 'completed') {
-                        clearInterval(interval);
-                        statusMessage.textContent = "Processing complete!";
-                        progressBar.style.width = '100%';
-                        submitBtn.disabled = false;
+          // ── Videos ──────────────────────────────────────────────────
+          const videoSection = document.getElementById('videoPlayerSection');
+          videoSection.style.display = 'block';
 
-                        // Switch to two column layout now that we have results
-                        document.getElementById('mainContainer').className = 'two-column-layout';
+          const poseVid = document.getElementById('outputVideo');
+          poseVid.src   = (data.exports.mp4_url) + '?t=' + Date.now();
+          poseVid.load();
 
-                        document.getElementById('dashboard').style.display = 'block';
-                        document.getElementById('avgConfidence').textContent = `${progData.metrics.average_confidence}%`;
+          const mvVid = document.getElementById('outputMovementVideo');
+          mvVid.src   = (data.exports.movement_mp4_url) + '?t=' + Date.now();
+          mvVid.load();
 
-                        document.getElementById('videoPlayerSection').style.display = 'block';
-                        const outputVideo = document.getElementById('outputVideo');
-                        outputVideo.src = progData.exports.mp4_url + '?t=' + new Date().getTime();
-                        outputVideo.load();
+          // Default: show pose tab
+          switchTab('pose');
 
-                        document.getElementById('movementDashboard').style.display = 'block';
-                        if (progData.movement_metrics) {
-                            document.getElementById('totalDist').textContent = progData.movement_metrics.total_distance_covered;
-                            document.getElementById('avgSpeed').textContent = progData.movement_metrics.average_speed;
-                            document.getElementById('maxSpeed').textContent = progData.movement_metrics.max_speed;
-                            document.getElementById('movementEff').textContent = progData.movement_metrics.movement_efficiency;
-                            document.getElementById('courtCoverage').textContent = `${progData.movement_metrics.court_coverage_percentage}%`;
-                            document.getElementById('jumpCount').textContent = progData.movement_metrics.jump_count;
-                            document.getElementById('avgRecoveryTime').textContent = progData.movement_metrics.average_recovery_time;
-                            document.getElementById('poseStability').textContent = progData.movement_metrics.pose_stability_score;
-                        }
+          // ── Movement metrics ─────────────────────────────────────────
+          const mvDash = document.getElementById('movementDashboard');
+          mvDash.style.display = 'block';
+          const mm = data.movement_metrics;
+          if (mm) {
+            document.getElementById('totalDist').textContent      = mm.total_distance_covered ?? '—';
+            document.getElementById('avgSpeed').textContent       = mm.average_speed ?? '—';
+            document.getElementById('maxSpeed').textContent       = mm.max_speed ?? '—';
+            document.getElementById('movementEff').textContent    = mm.movement_efficiency ?? '—';
+            document.getElementById('courtCoverage').textContent  =
+              mm.court_coverage_percentage != null ? `${mm.court_coverage_percentage}` : '—';
+            document.getElementById('jumpCount').textContent       = mm.jump_count ?? '—';
+            document.getElementById('avgRecoveryTime').textContent = mm.average_recovery_time ?? '—';
+            document.getElementById('poseStability').textContent   = mm.pose_stability_score ?? '—';
+          }
 
-                        document.getElementById('movementVideoSection').style.display = 'block';
-                        const outputMovementVideo = document.getElementById('outputMovementVideo');
-                        outputMovementVideo.src = progData.exports.movement_mp4_url + '?t=' + new Date().getTime();
-                        outputMovementVideo.load();
+          // ── Exports ──────────────────────────────────────────────────
+          const exDiv = document.getElementById('exports');
+          exDiv.style.display = 'block';
+          document.getElementById('btnJson').onclick        = () => window.location.href = data.exports.json_url;
+          document.getElementById('btnCsv').onclick         = () => window.location.href = data.exports.csv_url;
+          document.getElementById('btnMp4').onclick         = () => window.location.href = data.exports.mp4_url;
+          document.getElementById('btnMovementCsv').onclick = () => window.location.href = data.exports.movement_csv_url;
+          document.getElementById('btnMovementMp4').onclick = () => window.location.href = data.exports.movement_mp4_url;
 
-                        document.getElementById('exports').style.display = 'block';
-                        document.getElementById('btnJson').onclick = () => window.location.href = progData.exports.json_url;
-                        document.getElementById('btnCsv').onclick = () => window.location.href = progData.exports.csv_url;
-                        document.getElementById('btnMp4').onclick = () => window.location.href = progData.exports.mp4_url;
-                        document.getElementById('btnMovementCsv').onclick = () => window.location.href = progData.exports.movement_csv_url;
-                        document.getElementById('btnMovementMp4').onclick = () => window.location.href = progData.exports.movement_mp4_url;
-                    } else if (progData.status === 'failed') {
-                        clearInterval(interval);
-                        statusMessage.textContent = `Error: ${progData.error}`;
-                        submitBtn.disabled = false;
-                    }
-                } catch (err) {
-                    console.error("Polling error", err);
-                }
-            }, 1000); // Check every second
-
-        } else {
-            const error = await response.json();
-            statusMessage.textContent = `Error: ${error.detail}`;
-            submitBtn.disabled = false;
+        } else if (data.status === 'failed') {
+          clearInterval(interval);
+          setStatus('error', `Error: ${data.error}`);
+          progressStatus.textContent = 'Processing failed';
+          submitBtn.disabled      = false;
+          submitBtnText.textContent = 'Retry';
+          submitBtnIcon.textContent = '🔄';
         }
-    } catch (e) {
-        statusMessage.textContent = `Error: ${e.message}`;
-        submitBtn.disabled = false;
-    }
+
+      } catch (pollErr) {
+        console.error('Polling error:', pollErr);
+      }
+    }, 1000);
+
+  } catch (err) {
+    setStatus('error', err.message);
+    submitBtn.disabled        = false;
+    submitBtnText.textContent = 'Retry';
+    submitBtnIcon.textContent = '🔄';
+  }
 });

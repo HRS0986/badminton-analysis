@@ -21,7 +21,7 @@ progress_store = {}
 
 @app.get("/", response_class=HTMLResponse)
 async def read_index():
-    with open("static/index.html", "r") as f:
+    with open("static/index.html", "r", encoding="utf-8") as f:
         return f.read()
 
 # Placeholder model paths
