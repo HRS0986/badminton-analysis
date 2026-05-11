@@ -1,0 +1,20 @@
+[project]
+name = "badmintonpose"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.136.1",
+    "jupyter>=1.1.1",
+    "matplotlib>=3.10.9",
+    "numpy>=2.4.4",
+    "opencv-python>=4.13.0.92",
+    "pandas>=3.0.2",
+    "python-multipart>=0.0.28",
+    "scipy>=1.17.1",
+    "seaborn>=0.13.2",
+    "tqdm>=4.67.3",
+    "ultralytics>=8.4.48",
+    "uvicorn>=0.46.0",
+]

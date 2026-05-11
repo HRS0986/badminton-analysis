@@ -1,0 +1,165 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f9;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.centered-layout {
+    display: flex;
+    justify-content: center;
+}
+
+.centered-layout .left-column {
+    width: 100%;
+    max-width: 600px;
+}
+
+.centered-layout .right-column {
+    display: none;
+}
+
+.two-column-layout {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.two-column-layout .left-column {
+    flex: 1;
+    min-width: 300px;
+}
+
+.two-column-layout .right-column {
+    flex: 2;
+    min-width: 0;
+}
+
+@media (max-width: 768px) {
+    .two-column-layout {
+        flex-direction: column;
+    }
+}
+
+.upload-section,
+.dashboard,
+.exports {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.video-player {
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+video {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 8px;
+    background: #000;
+}
+
+.file-input-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.custom-file-upload {
+    border: 2px dashed #007bff;
+    display: inline-block;
+    padding: 20px 30px;
+    cursor: pointer;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+    color: #495057;
+    font-weight: bold;
+    text-align: center;
+    transition: all 0.2s ease-in-out;
+    flex-grow: 1;
+}
+
+.custom-file-upload:hover {
+    background-color: #e9ecef;
+    border-color: #0056b3;
+    color: #0056b3;
+}
+
+.custom-file-upload input[type="file"] {
+    display: none;
+}
+
+#file-name-display {
+    font-size: 0.9em;
+    color: #6c757d;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+button {
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.metrics {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.metric-card {
+    flex: 1;
+    background: #e9ecef;
+    padding: 15px;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.export-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.export-btn {
+    background-color: #28a745;
+}
+
+.export-btn:hover {
+    background-color: #218838;
+}
+
+#statusMessage {
+    margin-top: 10px;
+    font-weight: bold;
+}

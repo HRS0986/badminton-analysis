@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pose Detection Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Badminton Player Tracker & Pose Detection</h1>
+        </header>
+
+        <main id="mainContainer" class="centered-layout">
+            <div class="left-column">
+                <section class="upload-section">
+                    <h2>Upload Video</h2>
+                    <form id="uploadForm">
+                        <label class="custom-file-upload">
+                            <input type="file" id="videoFile" accept="video/mp4" required>
+                            <span id="file-name-display">Click to Select a Video (MP4)</span>
+                        </label>
+                        <button type="submit" id="submitBtn">Process Video</button>
+                    </form>
+
+                    <div id="progressContainer" style="display: none; margin-top: 15px;">
+                        <div
+                            style="background: #e9ecef; border-radius: 5px; width: 100%; height: 20px; overflow: hidden;">
+                            <div id="progressBar"
+                                style="background: #007bff; width: 0%; height: 100%; transition: width 0.2s;"></div>
+                        </div>
+                    </div>
+
+                    <div id="statusMessage" style="margin-top: 10px; font-weight: bold;"></div>
+                </section>
+                <section class="exports" id="exports" style="display: none;">
+                    <h2>Export Data</h2>
+                    <div class="export-buttons">
+                        <button id="btnJson" class="export-btn">Download JSON</button>
+                        <button id="btnCsv" class="export-btn">Download CSV</button>
+                        <button id="btnMp4" class="export-btn">Download Processed MP4</button>
+                    </div>
+                </section>
+            </div>
+
+            <div class="right-column">
+                <section class="dashboard" id="dashboard" style="display: none;">
+                    <h2>Summary Metrics</h2>
+                    <div class="metrics">
+                        <div class="metric-card">
+                            <h3>Player Tracked</h3>
+                            <p id="playerTracked">Yes</p>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Keypoints Detected</h3>
+                            <p id="keypointsDetected">17</p>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Average Confidence</h3>
+                            <p id="avgConfidence">0%</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="video-player" id="videoPlayerSection" style="display: none;">
+                    <h2>Analyzed Video</h2>
+                    <video id="outputVideo" height="500" controls></video>
+                </section>
+
+            </div>
+        </main>
+    </div>
+    <script src="/static/app.js"></script>
+</body>
+
+</html>
