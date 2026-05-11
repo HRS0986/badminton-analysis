@@ -121,7 +121,7 @@ def extract_detections(result, frame):
             "det_conf":      float(det_confs[i]),
             "keypoints":     kpts_xy[i].tolist(),
             "keypoint_conf": kpts_conf[i].tolist(),
-            "hist":          color_histogram(frame, boxes[i]),
+            "hist":          None,
         })
     return detections
 
@@ -138,6 +138,9 @@ def select_initial_target(detections, frame, prev_frame, frame_h):
         mv = motion_score(frame, prev_frame, box)
         if mv < MOTION_THRESHOLD:
             continue
+
+        if det.get("hist") is None:
+            det["hist"] = color_histogram(frame, box)
 
         score = (
             face_visibility_score(kpt_conf)                  * 4.0 +
@@ -166,6 +169,9 @@ def match_locked_target(detections, frame, prev_frame, locked_box, locked_hist, 
 
         area_ratio  = bbox_area(box) / (bbox_area(locked_box) + 1e-6)
         mv          = motion_score(frame, prev_frame, box)
+
+        if det.get("hist") is None:
+            det["hist"] = color_histogram(frame, box)
 
         match_score = (
             iou                                              * 4.0 +
@@ -224,6 +230,7 @@ def run_tracking_inference(video_path, out_mp4, out_json, out_csv, model_path="y
     last_good_detection = None
     prev_frame = None
     pose_name = "Detecting..."
+    shot_conf = 0.0
     
     total_conf = 0.0
     detected_frames = 0
@@ -237,14 +244,6 @@ def run_tracking_inference(video_path, out_mp4, out_json, out_csv, model_path="y
         
         base_result = baseline_model(frame, conf=CONF_THRES, verbose=False)[0]
         detections = extract_detections(base_result, frame)
-        
-        custom_result = custom_model(frame, verbose=False)[0]
-        if custom_result.boxes and len(custom_result.boxes) > 0:
-            pose_id = int(custom_result.boxes.cls[0].item())
-            pose_name = custom_result.names[pose_id]
-            shot_conf = float(custom_result.boxes.conf[0].item())
-        else:
-            shot_conf = 0.0
 
         selected = None
         match_score = None
@@ -293,6 +292,14 @@ def run_tracking_inference(video_path, out_mp4, out_json, out_csv, model_path="y
         }
 
         if selected is not None:
+            # Optimize: Only run the classification model every 5 frames if we have a tracked player
+            if frame_id % 5 == 0:
+                custom_result = custom_model(frame, verbose=False)[0]
+                if custom_result.boxes and len(custom_result.boxes) > 0:
+                    pose_id = int(custom_result.boxes.cls[0].item())
+                    pose_name = custom_result.names[pose_id]
+                    shot_conf = float(custom_result.boxes.conf[0].item())
+
             box = selected["box"]
             kpts = np.array(selected["keypoints"])
             kpt_conf = np.array(selected["keypoint_conf"])
