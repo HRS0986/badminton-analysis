@@ -1,203 +1,205 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Badminton AI — Movement Analytics</title>
+  <title>Badminton Player Analytics</title>
   <meta name="description" content="AI-powered badminton pose detection and movement analysis dashboard">
   <link rel="stylesheet" href="/static/style.css">
 </head>
+
 <body>
-<div class="app-shell">
+  <div class="app-shell">
 
-  <!-- ── Navbar ─────────────────────────────────────────────────────── -->
-  <nav class="navbar">
-    <div class="navbar-brand">
-      <div class="brand-icon">🏸</div>
-      <span class="brand-name">BadmintonAI</span>
-    </div>
-    <span class="navbar-badge">Movement Analytics</span>
-  </nav>
+    <!-- ── Navbar ─────────────────────────────────────────────────────── -->
+    <nav class="navbar">
+      <div class="navbar-brand">
+        <div class="brand-icon">🏸</div>
+        <span class="brand-name">Badminton Pose Detection &amp; Movement Analysis</span>
+      </div>
+    </nav>
 
-  <!-- ── Main ───────────────────────────────────────────────────────── -->
-  <div class="main-content">
+    <!-- ── Main ───────────────────────────────────────────────────────── -->
+    <div class="main-content">
 
-    <div class="page-header">
-      <h1 class="page-title">Pose Detection &amp; Movement Analysis</h1>
-      <p class="page-subtitle">Upload a match video to extract biomechanical insights in real-time</p>
-    </div>
+      <div id="mainContainer" class="centered-layout">
 
-    <div id="mainContainer" class="centered-layout">
+        <!-- ── LEFT COLUMN ──────────────────────────────────────────── -->
+        <div class="left-column">
 
-      <!-- ── LEFT COLUMN ──────────────────────────────────────────── -->
-      <div class="left-column">
-
-        <!-- Upload Card -->
-        <div class="glass-card" style="margin-bottom: 24px;">
-          <div class="card-header">
-            <div class="card-icon green">📤</div>
-            <span class="card-title">Upload Video</span>
-          </div>
-
-          <form id="uploadForm">
-            <label class="upload-area" id="uploadArea">
-              <input type="file" id="videoFile" accept="video/mp4,video/mov,video/avi" required>
-              <div class="upload-icon">🎬</div>
-              <div class="upload-label">Drop your video here</div>
-              <div class="upload-hint">MP4 · MOV · AVI — max 2 GB</div>
-            </label>
-
-            <div class="selected-file" id="selectedFile" style="display:none;">
-              <span class="file-icon">🎞️</span>
-              <span class="file-name" id="fileNameDisplay">No file selected</span>
+          <!-- Upload Card -->
+          <div class="glass-card" style="margin-bottom: 24px;">
+            <div class="card-header">
+              <div class="card-icon green">📤</div>
+              <span class="card-title">Upload Video</span>
             </div>
 
-            <button type="submit" id="submitBtn" class="btn-primary">
-              <span id="submitBtnIcon">⚡</span>
-              <span id="submitBtnText">Analyse Video</span>
-            </button>
-          </form>
+            <form id="uploadForm">
+              <label class="upload-area" id="uploadArea">
+                <input type="file" id="videoFile" accept="video/mp4,video/mov,video/avi" required>
+                <div class="upload-icon">🎬</div>
+                <div class="upload-label">Drop your video here</div>
+                <div class="upload-hint">MP4 · MOV · AVI — max 2 GB</div>
+              </label>
 
-          <!-- Progress -->
-          <div id="progressSection" class="progress-section" style="display:none;">
-            <div class="progress-header">
-              <span class="progress-status" id="progressStatus">Processing…</span>
-              <span class="progress-pct" id="progressPct">0%</span>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill" id="progressBar"></div>
-            </div>
-          </div>
+              <div class="selected-file" id="selectedFile" style="display:none;">
+                <span class="file-icon">🎞️</span>
+                <span class="file-name" id="fileNameDisplay">No file selected</span>
+              </div>
 
-          <div style="padding: 0 24px 20px; display:flex; align-items:center; gap:8px;">
-            <div class="status-badge idle" id="statusBadge">
-              <div class="status-dot" id="statusDot"></div>
-              <span id="statusText">Ready</span>
+              <button type="submit" id="submitBtn" class="btn-primary">
+                <span id="submitBtnIcon">⚡</span>
+                <span id="submitBtnText">Analyse Video</span>
+              </button>
+            </form>
+
+            <!-- Progress -->
+            <div id="progressSection" class="progress-section" style="display:none;">
+              <div class="progress-header">
+                <span class="progress-status" id="progressStatus">Processing…</span>
+                <span class="progress-pct" id="progressPct">0%</span>
+              </div>
+              <div class="progress-track">
+                <div class="progress-fill" id="progressBar"></div>
+              </div>
+            </div>
+
+            <div style="padding: 0 24px 20px; display:flex; align-items:center; gap:8px;">
+              <div class="status-badge idle" id="statusBadge">
+                <div class="status-dot" id="statusDot"></div>
+                <span id="statusText">Ready</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Export Card -->
-        <div class="glass-card fade-in" id="exports" style="display:none;">
-          <div class="card-header">
-            <div class="card-icon blue">📦</div>
-            <span class="card-title">Export Data</span>
-          </div>
-          <div class="export-grid">
-            <button id="btnJson"        class="export-btn"><span class="btn-icon">📋</span> JSON</button>
-            <button id="btnCsv"         class="export-btn"><span class="btn-icon">📊</span> CSV</button>
-            <button id="btnMp4"         class="export-btn"><span class="btn-icon">🎥</span> Pose Video</button>
-            <button id="btnMovementCsv" class="export-btn"><span class="btn-icon">📈</span> Movement CSV</button>
-            <button id="btnMovementMp4" class="export-btn" style="grid-column:span 2;"><span class="btn-icon">🏃</span> Movement Video</button>
-          </div>
-        </div>
-
-      </div><!-- /left-column -->
-
-      <!-- ── RIGHT COLUMN ─────────────────────────────────────────── -->
-      <div class="right-column" style="display:none;">
-
-        <!-- Tracking Summary Card -->
-        <div class="glass-card fade-in" id="dashboard" style="display:none;">
-          <div class="card-header">
-            <div class="card-icon blue">🎯</div>
-            <span class="card-title">Pose Detection</span>
-          </div>
-          <div class="tracking-row">
-            <div class="tracking-stat">
-              <div class="stat-value" id="playerTracked">✓</div>
-              <div class="stat-label">Player Locked</div>
+          <!-- Export Card -->
+          <div class="glass-card fade-in" id="exports" style="display:none;">
+            <div class="card-header">
+              <div class="card-icon blue">📦</div>
+              <span class="card-title">Export Data</span>
             </div>
-            <div class="tracking-stat">
-              <div class="stat-value" id="keypointsDetected">17</div>
-              <div class="stat-label">Keypoints</div>
-            </div>
-            <div class="tracking-stat">
-              <div class="stat-value" id="avgConfidence">—</div>
-              <div class="stat-label">Avg Confidence</div>
+            <div class="export-grid">
+              <button id="btnJson" class="export-btn"><span class="btn-icon">📋</span> JSON</button>
+              <button id="btnCsv" class="export-btn"><span class="btn-icon">📊</span> CSV</button>
+              <button id="btnMp4" class="export-btn"><span class="btn-icon">🎥</span> Pose Video</button>
+              <button id="btnMovementCsv" class="export-btn"><span class="btn-icon">📈</span> Movement CSV</button>
+              <button id="btnMovementMp4" class="export-btn" style="grid-column:span 2;"><span
+                  class="btn-icon">🏃</span> Movement Video</button>
             </div>
           </div>
-        </div>
 
-        <!-- Movement Metrics Card -->
-        <div class="glass-card fade-in" id="movementDashboard" style="display:none;">
-          <div class="card-header">
-            <div class="card-icon green">📐</div>
-            <span class="card-title">Movement Metrics</span>
-          </div>
-          <div class="metrics-grid">
-            <div class="metric-card">
-              <div class="metric-label">Distance</div>
-              <div class="metric-value" id="totalDist">—</div>
-              <div class="metric-unit">metres</div>
+        </div><!-- /left-column -->
+
+        <!-- ── RIGHT COLUMN ─────────────────────────────────────────── -->
+        <div class="right-column" style="display:none;">
+
+          <!-- Tracking Summary Card -->
+          <div class="glass-card fade-in" id="dashboard" style="display:none;">
+            <div class="card-header">
+              <div class="card-icon blue">🎯</div>
+              <span class="card-title">Pose Detection</span>
             </div>
-            <div class="metric-card">
-              <div class="metric-label">Avg Speed</div>
-              <div class="metric-value" id="avgSpeed">—</div>
-              <div class="metric-unit">m/s</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">Max Speed</div>
-              <div class="metric-value" id="maxSpeed">—</div>
-              <div class="metric-unit">m/s</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">Efficiency</div>
-              <div class="metric-value" id="movementEff">—</div>
-              <div class="metric-unit">score</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">Coverage</div>
-              <div class="metric-value" id="courtCoverage">—</div>
-              <div class="metric-unit">% of court</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">Jumps</div>
-              <div class="metric-value" id="jumpCount">—</div>
-              <div class="metric-unit">detected</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">Recovery</div>
-              <div class="metric-value" id="avgRecoveryTime">—</div>
-              <div class="metric-unit">sec avg</div>
-            </div>
-            <div class="metric-card">
-              <div class="metric-label">Stability</div>
-              <div class="metric-value" id="poseStability">—</div>
-              <div class="metric-unit">score</div>
+            <div class="tracking-row">
+              <div class="tracking-stat">
+                <div class="stat-value" id="playerTracked">✓</div>
+                <div class="stat-label">Player Locked</div>
+              </div>
+              <div class="tracking-stat">
+                <div class="stat-value" id="keypointsDetected">17</div>
+                <div class="stat-label">Keypoints</div>
+              </div>
+              <div class="tracking-stat">
+                <div class="stat-value" id="avgConfidence">—</div>
+                <div class="stat-label">Avg Confidence</div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Video Player Card -->
-        <div class="glass-card fade-in" id="videoPlayerSection" style="display:none;">
-          <div class="card-header">
-            <div class="card-icon purple">▶️</div>
-            <span class="card-title">Analysis Output</span>
+          <!-- Movement Metrics Card -->
+          <div class="glass-card fade-in" id="movementDashboard" style="display:none;">
+            <div class="card-header">
+              <div class="card-icon green">📐</div>
+              <span class="card-title">Movement Metrics</span>
+            </div>
+            <div class="metrics-grid">
+              <div class="metric-card">
+                <div class="metric-label">Distance</div>
+                <div class="metric-value" id="totalDist">—</div>
+                <div class="metric-unit">metres</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Avg Speed</div>
+                <div class="metric-value" id="avgSpeed">—</div>
+                <div class="metric-unit">m/s</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Max Speed</div>
+                <div class="metric-value" id="maxSpeed">—</div>
+                <div class="metric-unit">m/s</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Efficiency</div>
+                <div class="metric-value" id="movementEff">—</div>
+                <div class="metric-unit">score</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Coverage</div>
+                <div class="metric-value" id="courtCoverage">—</div>
+                <div class="metric-unit">% of court</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Jumps</div>
+                <div class="metric-value" id="jumpCount">—</div>
+                <div class="metric-unit">detected</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Recovery</div>
+                <div class="metric-value" id="avgRecoveryTime">—</div>
+                <div class="metric-unit">sec avg</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">Stability</div>
+                <div class="metric-value" id="poseStability">—</div>
+                <div class="metric-unit">score</div>
+              </div>
+            </div>
           </div>
 
-          <!-- Video tab selector -->
-          <div class="tab-bar">
-            <button class="tab-btn active" id="tabPose"     onclick="switchTab('pose')">🎯 Pose Detection</button>
-            <button class="tab-btn"        id="tabMovement" onclick="switchTab('movement')">🏃 Movement Analysis</button>
+          <!-- Video Player Card -->
+          <div class="glass-card fade-in" id="videoPlayerSection" style="display:none;">
+            <div class="card-header">
+              <div class="card-icon purple">▶️</div>
+              <span class="card-title">Analysis Output</span>
+            </div>
+
+            <div class="dual-video-grid">
+              <div class="video-col">
+                <div class="video-col-label">
+                  <span>🎯</span> Pose Detection
+                </div>
+                <video id="outputVideo" controls></video>
+              </div>
+              <div class="video-col">
+                <div class="video-col-label">
+                  <span>🏃</span> Movement Analysis
+                </div>
+                <video id="outputMovementVideo" controls></video>
+              </div>
+            </div>
           </div>
 
-          <div class="video-wrapper">
-            <video id="outputVideo"         controls style="display:block;"></video>
-            <video id="outputMovementVideo" controls style="display:none;"></video>
-          </div>
-        </div>
+        </div><!-- /right-column -->
 
-      </div><!-- /right-column -->
+      </div><!-- /mainContainer -->
+    </div><!-- /main-content -->
 
-    </div><!-- /mainContainer -->
-  </div><!-- /main-content -->
+    <footer class="app-footer">
+      BadmintonAI · Pose Detection &amp; Movement Analytics · Built with YOLOv8
+    </footer>
+  </div><!-- /app-shell -->
 
-  <footer class="app-footer">
-    BadmintonAI · Pose Detection &amp; Movement Analytics · Built with YOLOv8
-  </footer>
-</div><!-- /app-shell -->
-
-<script src="/static/app.js?v=2.0"></script>
+  <script src="/static/app.js?v=2.0"></script>
 </body>
+
 </html>

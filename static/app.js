@@ -1,22 +1,4 @@
-/* ── Tab switcher (global, called from HTML onclick) ─────────────────────── */
-function switchTab(tab) {
-  const poseVideo     = document.getElementById('outputVideo');
-  const movementVideo = document.getElementById('outputMovementVideo');
-  const tabPose       = document.getElementById('tabPose');
-  const tabMovement   = document.getElementById('tabMovement');
 
-  if (tab === 'pose') {
-    poseVideo.style.display     = 'block';
-    movementVideo.style.display = 'none';
-    tabPose.classList.add('active');
-    tabMovement.classList.remove('active');
-  } else {
-    poseVideo.style.display     = 'none';
-    movementVideo.style.display = 'block';
-    tabPose.classList.remove('active');
-    tabMovement.classList.add('active');
-  }
-}
 
 /* ── Element refs ────────────────────────────────────────────────────────── */
 const fileInput       = document.getElementById('videoFile');
@@ -169,8 +151,7 @@ document.getElementById('uploadForm').addEventListener('submit', async (e) => {
           mvVid.src   = (data.exports.movement_mp4_url) + '?t=' + Date.now();
           mvVid.load();
 
-          // Default: show pose tab
-          switchTab('pose');
+
 
           // ── Movement metrics ─────────────────────────────────────────
           const mvDash = document.getElementById('movementDashboard');

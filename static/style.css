@@ -62,7 +62,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 36px;
+  padding: 0 40px;
   height: 64px;
   background: rgba(8,12,20,0.72);
   backdrop-filter: blur(18px);
@@ -116,9 +116,7 @@ body {
 .main-content {
   flex: 1;
   padding: 40px 36px;
-  max-width: 1440px;
   width: 100%;
-  margin: 0 auto;
 }
 
 /* ── Page Title ──────────────────────────────────────────────────────────── */
@@ -232,6 +230,7 @@ body {
   line-height: 1;
   margin-bottom: 14px;
   filter: drop-shadow(0 0 12px rgba(99,230,182,0.4));
+  pointer-events: none;
 }
 
 .upload-label {
@@ -239,11 +238,13 @@ body {
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 6px;
+  pointer-events: none;
 }
 
 .upload-hint {
   font-size: 0.8rem;
   color: var(--text-muted);
+  pointer-events: none;
 }
 
 .upload-area input[type="file"] { display: none; }
@@ -397,12 +398,12 @@ body {
 }
 
 #mainContainer.centered-layout {
-  grid-template-columns: minmax(0, 480px);
+  grid-template-columns: minmax(0, 640px);
   justify-content: center;
 }
 
 #mainContainer.two-column-layout {
-  grid-template-columns: 380px 1fr;
+  grid-template-columns: 420px 1fr;
   align-items: start;
 }
 
@@ -412,12 +413,12 @@ body {
   gap: 24px;
 }
 
-@media (max-width: 960px) {
+@media (max-width: 768px) {
   #mainContainer.two-column-layout {
     grid-template-columns: 1fr;
   }
-  .main-content { padding: 24px 20px; }
-  .navbar { padding: 0 20px; }
+  .main-content { padding: 24px 16px; }
+  .navbar { padding: 0 16px; }
 }
 
 /* ── Metric Grid ─────────────────────────────────────────────────────────── */
@@ -480,46 +481,37 @@ body {
 }
 
 /* ── Video Player ────────────────────────────────────────────────────────── */
-.video-wrapper {
+.dual-video-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
   padding: 0 24px 24px;
+}
+
+.video-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.video-col-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 4px;
 }
 
 video {
   width: 100%;
+  height: 500px;
+  object-fit: contain;
   border-radius: var(--radius-md);
   background: #000;
   display: block;
   box-shadow: 0 4px 28px rgba(0,0,0,0.6);
-}
-
-/* ── Tab Bar (for video switching) ──────────────────────────────────────── */
-.tab-bar {
-  display: flex;
-  gap: 4px;
-  padding: 0 24px;
-  margin-bottom: 16px;
-}
-
-.tab-btn {
-  flex: 1;
-  padding: 8px;
-  background: var(--bg-glass);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-family: inherit;
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--transition);
-  letter-spacing: 0.02em;
-}
-
-.tab-btn.active,
-.tab-btn:hover {
-  background: rgba(99,230,182,0.12);
-  border-color: rgba(99,230,182,0.4);
-  color: var(--neon-green);
 }
 
 /* ── Export Buttons ──────────────────────────────────────────────────────── */
