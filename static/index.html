@@ -42,13 +42,15 @@
                         <button id="btnJson" class="export-btn">Download JSON</button>
                         <button id="btnCsv" class="export-btn">Download CSV</button>
                         <button id="btnMp4" class="export-btn">Download Processed MP4</button>
+                        <button id="btnMovementCsv" class="export-btn">Download Movement CSV</button>
+                        <button id="btnMovementMp4" class="export-btn">Download Movement MP4</button>
                     </div>
                 </section>
             </div>
 
-            <div class="right-column">
+            <div class="right-column" style="display: flex; flex-direction: column; gap: 20px;">
                 <section class="dashboard" id="dashboard" style="display: none;">
-                    <h2>Summary Metrics</h2>
+                    <h2>Player Tracking & Pose Detection</h2>
                     <div class="metrics">
                         <div class="metric-card">
                             <h3>Player Tracked</h3>
@@ -70,10 +72,52 @@
                     <video id="outputVideo" height="500" controls></video>
                 </section>
 
+                <section class="dashboard" id="movementDashboard" style="display: none;">
+                    <h2>Movement Analysis Metrics</h2>
+                    <div class="metrics" style="flex-wrap: wrap;">
+                        <div class="metric-card">
+                            <h3>Total Dist (m)</h3>
+                            <p id="totalDist">0</p>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Avg Speed (m/s)</h3>
+                            <p id="avgSpeed">0</p>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Max Speed (m/s)</h3>
+                            <p id="maxSpeed">0</p>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Movement Eff.</h3>
+                            <p id="movementEff">0</p>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Court Coverage</h3>
+                            <p id="courtCoverage">0%</p>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Jump Count</h3>
+                            <p id="jumpCount">0</p>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Avg Recovery Time (s)</h3>
+                            <p id="avgRecoveryTime">0</p>
+                        </div>
+                        <div class="metric-card">
+                            <h3>Pose Stability</h3>
+                            <p id="poseStability">0</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="video-player" id="movementVideoSection" style="display: none;">
+                    <h2>Movement Analysis Video</h2>
+                    <video id="outputMovementVideo" height="500" controls></video>
+                </section>
             </div>
         </main>
     </div>
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v=1.1"></script>
 </body>
 
 </html>

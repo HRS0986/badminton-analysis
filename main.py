@@ -6,6 +6,7 @@ from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 from tracker import run_tracking_inference
+from movement import extract_movement_features
 
 app = FastAPI(title="Badminton Pose Detection API")
 
@@ -42,14 +43,31 @@ def process_video_task(task_id, video_path, mp4_path, json_path, csv_path):
             custom_model_path=CUSTOM_CLASSIFICATION_MODEL_PATH,
             progress_callback=progress_cb
         )
+
+        movement_json_path = os.path.join(TEMP_DIR, "movement_metrics.json")
+        movement_csv_path = os.path.join(TEMP_DIR, "movement_features.csv")
+        movement_mp4_path = os.path.join(TEMP_DIR, "movement_output.mp4")
+        
+        movement_metrics = extract_movement_features(
+            input_json_path=json_path,
+            output_json_path=movement_json_path,
+            output_csv_path=movement_csv_path,
+            output_video_path=movement_mp4_path,
+            original_video_path=video_path
+        )
+
         progress_store[task_id] = {
             "status": "completed", 
             "progress": 100, 
             "metrics": metrics,
+            "movement_metrics": movement_metrics,
             "exports": {
                 "json_url": "/api/download/output.json",
                 "csv_url": "/api/download/output.csv",
-                "mp4_url": "/api/download/output.mp4"
+                "mp4_url": "/api/download/output.mp4",
+                "movement_csv_url": "/api/download/movement_features.csv",
+                "movement_json_url": "/api/download/movement_metrics.json",
+                "movement_mp4_url": "/api/download/movement_output.mp4"
             }
         }
     except Exception as e:

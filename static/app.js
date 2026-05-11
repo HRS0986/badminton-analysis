@@ -30,8 +30,10 @@ document.getElementById('uploadForm').addEventListener('submit', async (e) => {
     progressContainer.style.display = 'block';
     progressBar.style.width = '0%';
     document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('movementDashboard').style.display = 'none';
     document.getElementById('exports').style.display = 'none';
     document.getElementById('videoPlayerSection').style.display = 'none';
+    document.getElementById('movementVideoSection').style.display = 'none';
     submitBtn.disabled = true;
 
     // reset to centered layout on new upload iteration
@@ -70,13 +72,32 @@ document.getElementById('uploadForm').addEventListener('submit', async (e) => {
 
                         document.getElementById('videoPlayerSection').style.display = 'block';
                         const outputVideo = document.getElementById('outputVideo');
-                        outputVideo.src = progData.exports.mp4_url;
+                        outputVideo.src = progData.exports.mp4_url + '?t=' + new Date().getTime();
                         outputVideo.load();
+
+                        document.getElementById('movementDashboard').style.display = 'block';
+                        if (progData.movement_metrics) {
+                            document.getElementById('totalDist').textContent = progData.movement_metrics.total_distance_covered;
+                            document.getElementById('avgSpeed').textContent = progData.movement_metrics.average_speed;
+                            document.getElementById('maxSpeed').textContent = progData.movement_metrics.max_speed;
+                            document.getElementById('movementEff').textContent = progData.movement_metrics.movement_efficiency;
+                            document.getElementById('courtCoverage').textContent = `${progData.movement_metrics.court_coverage_percentage}%`;
+                            document.getElementById('jumpCount').textContent = progData.movement_metrics.jump_count;
+                            document.getElementById('avgRecoveryTime').textContent = progData.movement_metrics.average_recovery_time;
+                            document.getElementById('poseStability').textContent = progData.movement_metrics.pose_stability_score;
+                        }
+
+                        document.getElementById('movementVideoSection').style.display = 'block';
+                        const outputMovementVideo = document.getElementById('outputMovementVideo');
+                        outputMovementVideo.src = progData.exports.movement_mp4_url + '?t=' + new Date().getTime();
+                        outputMovementVideo.load();
 
                         document.getElementById('exports').style.display = 'block';
                         document.getElementById('btnJson').onclick = () => window.location.href = progData.exports.json_url;
                         document.getElementById('btnCsv').onclick = () => window.location.href = progData.exports.csv_url;
                         document.getElementById('btnMp4').onclick = () => window.location.href = progData.exports.mp4_url;
+                        document.getElementById('btnMovementCsv').onclick = () => window.location.href = progData.exports.movement_csv_url;
+                        document.getElementById('btnMovementMp4').onclick = () => window.location.href = progData.exports.movement_mp4_url;
                     } else if (progData.status === 'failed') {
                         clearInterval(interval);
                         statusMessage.textContent = `Error: ${progData.error}`;
